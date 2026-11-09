@@ -95,7 +95,7 @@ public final class ProcessSampler: @unchecked Sendable {
         return ProcessDetails(
             cwd: Self.currentDirectory(process.pid),
             arguments: arguments,
-            listeningPorts: Self.listeningPorts(process.pid)
+            sockets: Self.listeningSockets(process.pid)
         )
     }
 
@@ -186,6 +186,11 @@ public final class ProcessSampler: @unchecked Sendable {
     }
 
     static func listeningPorts(_ pid: Int32) -> [Int] {
+        Array(Set(listeningSockets(pid).map(\.port))).sorted()
+    }
+
+    /// Ports TCP en écoute d'un processus, avec l'adresse : seulement ce Mac (127.0.0.1, ::1) ou tout le réseau.
+    public static func listeningSockets(_ pid: Int32) -> [ListeningSocket] {
         let bufferSize = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, nil, 0)
         guard bufferSize > 0 else { return [] }
         let stride = MemoryLayout<proc_fdinfo>.stride
@@ -193,7 +198,7 @@ public final class ProcessSampler: @unchecked Sendable {
         let used = descriptors.withUnsafeMutableBytes { proc_pidinfo(pid, PROC_PIDLISTFDS, 0, $0.baseAddress, bufferSize) }
         guard used > 0 else { return [] }
 
-        var ports = Set<Int>()
+        var sockets: [ListeningSocket] = []
         for descriptor in descriptors.prefix(Int(used) / stride) where descriptor.proc_fdtype == UInt32(PROX_FDTYPE_SOCKET) {
             var socket = socket_fdinfo()
             let socketSize = Int32(MemoryLayout<socket_fdinfo>.size)
@@ -202,9 +207,24 @@ public final class ProcessSampler: @unchecked Sendable {
             let tcp = socket.psi.soi_proto.pri_tcp
             guard Int(tcp.tcpsi_state) == Int(TSI_S_LISTEN) else { continue }
             let port = Int(UInt16(bigEndian: UInt16(truncatingIfNeeded: tcp.tcpsi_ini.insi_lport)))
-            if port > 0 { ports.insert(port) }
+            guard port > 0 else { continue }
+            let info = tcp.tcpsi_ini
+            let address: String
+            if info.insi_vflag & UInt8(INI_IPV6) != 0 {
+                var raw = info.insi_laddr.ina_6
+                var text = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
+                inet_ntop(AF_INET6, &raw, &text, socklen_t(text.count))
+                address = String(cString: text)
+            } else {
+                var raw = info.insi_laddr.ina_46.i46a_addr4
+                var text = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+                inet_ntop(AF_INET, &raw, &text, socklen_t(text.count))
+                address = String(cString: text)
+            }
+            let item = ListeningSocket(port: port, address: address)
+            if !sockets.contains(item) { sockets.append(item) }
         }
-        return ports.sorted()
+        return sockets.sorted { ($0.port, $0.address) < ($1.port, $1.address) }
     }
 
     static func string<T>(fromTuple tuple: T) -> String {

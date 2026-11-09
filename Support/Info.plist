@@ -2,35 +2,37 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleName</key>
-	<string>Vigie</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>fr</string>
 	<key>CFBundleDisplayName</key>
 	<string>Vigie</string>
-	<key>CFBundleIdentifier</key>
-	<string>io.github.0xg00dkat.vigie</string>
 	<key>CFBundleExecutable</key>
 	<string>Vigie</string>
 	<key>CFBundleIconFile</key>
-	<string>AppIcon</string>
+	<string>Vigie</string>
+	<key>CFBundleIconName</key>
+	<string>Vigie</string>
+	<key>CFBundleIdentifier</key>
+	<string>io.github.0xg00dkat.vigie</string>
+	<key>CFBundleName</key>
+	<string>Vigie</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.2.0</string>
+	<string>0.3.0</string>
 	<key>CFBundleVersion</key>
-	<string>2</string>
-	<!-- Dépôt GitHub consulté pour les mises à jour (à changer dans un fork). -->
-	<key>VigieUpdateRepository</key>
-	<string>0xG00dKat/vigie</string>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>fr</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>14.0</string>
-	<!-- App de barre des menus : pas d'icône dans le Dock. -->
-	<key>LSUIElement</key>
-	<true/>
+	<string>3</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Vigie demande au Finder de vider la corbeille, seulement quand tu cliques sur « Vider la corbeille ».</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 G00dKat · Licence MIT</string>
+	<key>VigieUpdateRepository</key>
+	<string>0xG00dKat/vigie</string>
 </dict>
 </plist>

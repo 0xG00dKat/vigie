@@ -7,6 +7,14 @@ public enum ProcessCategory: String, CaseIterable, Identifiable, Sendable {
     public var id: String { rawValue }
 
     public var title: String {
+        if Wording.simple {
+            switch self {
+            case .apps: return tr("Apps ouvertes", "Open apps")
+            case .dev: return tr("Outils de développement", "Developer tools")
+            case .background: return tr("Programmes discrets", "Quiet helpers")
+            case .system: return tr("macOS", "macOS")
+            }
+        }
         switch self {
         case .apps: return tr("Apps", "Apps")
         case .dev: return tr("Dev & terminal", "Dev & terminal")
@@ -16,6 +24,21 @@ public enum ProcessCategory: String, CaseIterable, Identifiable, Sendable {
     }
 
     public var help: String {
+        if Wording.simple {
+            switch self {
+            case .apps:
+                return tr("Les apps que tu as ouvertes. Les quitter libère de la mémoire ; tu les rouvres quand tu veux.",
+                          "The apps you opened. Quitting them frees memory; reopen them whenever you like.")
+            case .dev:
+                return tr("Outils pour programmer.", "Programming tools.")
+            case .background:
+                return tr("Petits programmes sans fenêtre : icônes de la barre des menus, synchronisation, mises à jour.",
+                          "Small programs without a window: menu bar icons, sync, updates.")
+            case .system:
+                return tr("Le fonctionnement de macOS lui-même. Rien à faire ici : Vigie n'y touche pas.",
+                          "macOS itself at work. Nothing to do here: Vigie never touches it.")
+            }
+        }
         switch self {
         case .apps:
             return tr("Les apps ouvertes, chacune avec tous ses processus d'aide.",
@@ -75,6 +98,8 @@ public struct RawProcess: Sendable, Hashable, Identifiable {
     public var cwd: String?
     public var arguments: [String]
     public var listeningPorts: [Int]
+    /// Ports qui écoutent sur tout le réseau (visibles des autres appareils du Wi-Fi), pas seulement sur ce Mac.
+    public var exposedPorts: [Int] = []
 
     public init(
         pid: Int32, ppid: Int32, uid: UInt32, name: String, path: String,
@@ -96,16 +121,42 @@ public struct RawProcess: Sendable, Hashable, Identifiable {
     }
 }
 
+/// Un port TCP en écoute, et l'adresse sur laquelle il écoute.
+public struct ListeningSocket: Sendable, Equatable, Hashable {
+    public var port: Int
+    public var address: String
+
+    public init(port: Int, address: String) {
+        self.port = port
+        self.address = address
+    }
+
+    /// 127.0.0.1 ou ::1 : seul ce Mac peut s'y connecter. Toute autre adresse (0.0.0.0, ::, l'adresse du Mac sur le Wi-Fi)
+    /// le rend joignable par les autres appareils du même réseau.
+    public var isLoopback: Bool {
+        address.hasPrefix("127.") || address == "::1" || address.hasPrefix("::ffff:127.")
+    }
+
+    public var isExposed: Bool { !isLoopback }
+}
+
 /// Détails coûteux, lus seulement pour les processus de dev.
 public struct ProcessDetails: Sendable, Equatable {
     public var cwd: String?
     public var arguments: [String]
     public var listeningPorts: [Int]
+    public var exposedPorts: [Int]
 
-    public init(cwd: String? = nil, arguments: [String] = [], listeningPorts: [Int] = []) {
+    public init(cwd: String? = nil, arguments: [String] = [], listeningPorts: [Int] = [], exposedPorts: [Int] = []) {
         self.cwd = cwd
         self.arguments = arguments
         self.listeningPorts = listeningPorts
+        self.exposedPorts = exposedPorts
+    }
+
+    public init(cwd: String?, arguments: [String], sockets: [ListeningSocket]) {
+        self.init(cwd: cwd, arguments: arguments, listeningPorts: Array(Set(sockets.map(\.port))).sorted(),
+                  exposedPorts: Array(Set(sockets.filter(\.isExposed).map(\.port))).sorted())
     }
 
     public static let empty = ProcessDetails()
@@ -173,6 +224,8 @@ public struct ProcessGroup: Identifiable, Sendable {
     public var memory: UInt64
     public var cpuPercent: Double
     public var ports: [Int]
+    /// Ports visibles sur le réseau (pas seulement sur ce Mac).
+    public var exposedPorts: [Int]
     public var startTime: Date?
     /// App depuis laquelle les processus ont été lancés (Terminal, Cursor, Claude…).
     public var launchedBy: String?
@@ -201,6 +254,7 @@ public struct ProcessGroup: Identifiable, Sendable {
         self.memory = sorted.reduce(0) { $0 + ($1.memory ?? 0) }
         self.cpuPercent = sorted.reduce(0) { $0 + ($1.cpuPercent ?? 0) }
         self.ports = Array(Set(sorted.flatMap(\.listeningPorts))).sorted()
+        self.exposedPorts = Array(Set(sorted.flatMap(\.exposedPorts))).sorted()
         self.startTime = sorted.compactMap(\.startTime).min()
         self.launchedBy = launchedBy
         self.isOrphan = isOrphan

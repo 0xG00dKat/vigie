@@ -11,7 +11,8 @@ struct DiskGauge: View {
         let used = 1 - disk.freeRatio
         let color: Color = disk.isLow ? .red : disk.isTight ? .orange : .green
         HStack(spacing: 6) {
-            Text(tr("Disque \(Format.bytes(disk.available, decimal: true)) libres", "Disk \(Format.bytes(disk.available, decimal: true)) free"))
+            Text(tr("Disque \(Format.bytes(disk.available, decimal: true)) libres sur \(Format.bytes(disk.total, decimal: true))",
+                    "Disk \(Format.bytes(disk.available, decimal: true)) free of \(Format.bytes(disk.total, decimal: true))"))
                 .font(.system(size: 11))
                 .monospacedDigit()
                 .foregroundStyle(disk.isLow ? Color.red : Color.secondary)
@@ -46,6 +47,25 @@ struct LowDiskBanner: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if model.isDiagnosingDisk {
+                    Text(tr("Analyse en cours pour trouver ce qui prend de la place…", "Analyzing to find what's taking up space…"))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                } else if let diagnosis = model.diskDiagnosis {
+                    ForEach([diagnosis.growthLine(), diagnosis.reclaimableLine()].compactMap { $0 }, id: \.self) { line in
+                        Text(line)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.primary.opacity(0.85))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Button(tr("Voir le stockage", "See storage")) {
+                    model.mode = .storage
+                    if model.storage == nil { model.scanStorage() }
+                }
+                .buttonStyle(.borderless)
+                .font(.system(size: 11, weight: .medium))
+                .padding(.top, 2)
             }
             Spacer(minLength: 0)
         }
@@ -59,7 +79,7 @@ struct LowDiskBanner: View {
     private var message: String {
         let free = Format.bytes(disk.available, decimal: true)
         var text = tr("Il reste \(disk.freePercent) % d'espace libre (\(free)).", "Only \(disk.freePercent)% free space left (\(free)).")
-        if let docker = model.docker?.virtualDisk {
+        if model.diskDiagnosis == nil, !model.isDiagnosingDisk, let docker = model.docker?.virtualDisk {
             let size = Format.bytes(docker.allocated, decimal: true)
             text += " " + tr("Docker en occupe \(size) : voir la section Docker.", "Docker uses \(size): see the Docker section.")
         }
@@ -75,26 +95,32 @@ enum DockerIcon {
 
 struct DockerSectionView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.inVigieWindow) private var inWindow
 
     var body: some View {
         if let docker = model.docker, docker.state != .notInstalled {
             let groups = model.visibleDockerGroups
             if !model.isSearching || !groups.isEmpty {
                 Section {
-                    if model.isDockerOpen {
+                    if model.isDockerOpen || inWindow {
                         switch docker.state {
                         case .running:
-                            ForEach(groups) { group in
-                                DockerGroupRow(group: group)
-                                Divider().padding(.leading, 50)
+                            // Une carte arrondie, comme les familles de processus au-dessus.
+                            VStack(spacing: 0) {
+                                ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
+                                    if index > 0 { Divider().padding(.leading, 50) }
+                                    DockerGroupRow(group: group)
+                                }
+                                if groups.isEmpty {
+                                    Text(tr("Aucun conteneur en cours.", "No running containers."))
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.secondary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                }
                             }
-                            if groups.isEmpty {
-                                Text(tr("Aucun conteneur en cours.", "No running containers."))
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                            }
+                            .panelCard()
                         case .notRunning:
                             DockerStoppedRow(docker: docker)
                         case .notInstalled:
@@ -136,20 +162,20 @@ struct DockerSectionHeader: View {
                         .font(.system(size: 8.5, weight: .bold))
                         .rotationEffect(.degrees(open ? 90 : 0))
                         .frame(width: 10)
-                    Text("DOCKER")
-                        .font(.system(size: 10.5, weight: .semibold))
+                    Text("Docker")
+                        .font(.system(size: 12, weight: .semibold))
                     if docker.state == .running {
                         Text("\(docker.containers.count)")
-                            .font(.system(size: 10.5))
+                            .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                         if docker.memory > 0 {
                             Text("· \(Format.bytes(docker.memory))")
-                                .font(.system(size: 10.5))
+                                .font(.system(size: 11))
                                 .foregroundStyle(.secondary)
                         }
                     } else {
                         Text(tr("· arrêté", "· stopped"))
-                            .font(.system(size: 10.5))
+                            .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -167,9 +193,9 @@ struct DockerSectionHeader: View {
                 DockerStopAllButton(ids: docker.containers.map(\.id))
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(.bar)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+        .background(.regularMaterial)
     }
 }
 
@@ -210,14 +236,7 @@ struct DockerAppIcon: View {
                 .interpolation(.high)
                 .frame(width: 28, height: 28)
         } else {
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .fill(Color.blue.gradient)
-                .frame(width: 26, height: 26)
-                .overlay {
-                    Image(systemName: "shippingbox.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
+            VigieTile(symbol: "shippingbox", size: 26)
                 .padding(1)
         }
     }
@@ -364,11 +383,13 @@ struct DockerStoppedRow: View {
 /// Place prise par Docker, et les commandes de nettoyage à copier. Vigie ne supprime rien elle-même.
 struct DockerDiskBlock: View {
     let docker: DockerStatus
+    /// Dans une case de la fenêtre : titre plus grand, pas de fond gris (la case en a déjà un).
+    @Environment(\.flatCards) private var flat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: flat ? 7 : 5) {
             Text(tr("Espace disque de Docker", "Docker disk space"))
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: flat ? 14 : 11, weight: .semibold))
             if let virtual = docker.virtualDisk {
                 DiskLine(
                     label: tr("Disque virtuel sur le Mac", "Virtual disk on the Mac"),
@@ -420,10 +441,13 @@ struct DockerDiskBlock: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.04)))
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(flat ? 0 : 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // Panneau : une carte comme les autres ; dans une case de la fenêtre, rien (la case a déjà son fond).
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(flat ? Color.clear : DS.surface))
+        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.primary.opacity(flat ? 0 : 0.08), lineWidth: 0.5))
+        .padding(.horizontal, flat ? 0 : 10)
+        .padding(.vertical, flat ? 0 : 6)
     }
 
     private func reclaimable(_ bytes: UInt64) -> String? {
@@ -485,10 +509,12 @@ struct CommandRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.system(size: 10.5))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if !label.isEmpty {
+                Text(label)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             HStack(spacing: 6) {
                 Text(command)
                     .font(.system(size: 10.5, design: .monospaced))

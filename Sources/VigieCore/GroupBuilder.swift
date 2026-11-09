@@ -138,6 +138,7 @@ public struct GroupBuilder {
             enriched.cwd = found.cwd
             enriched.arguments = found.arguments
             enriched.listeningPorts = found.listeningPorts
+            enriched.exposedPorts = found.exposedPorts
             enriched.name = PathRules.devDisplayName(path: process.path, fallback: process.name, arguments: found.arguments)
             enrichedByPID[process.pid] = enriched
             if let cwd = found.cwd, PathRules.isProjectDirectory(cwd, home: homeDirectory) {
@@ -395,7 +396,7 @@ public struct GroupBuilder {
         if containsSelf {
             explanation = Explanation(tr("C'est Vigie, l'app que tu utilises en ce moment.", "This is Vigie, the app you are using right now."))
         } else if category == .system {
-            explanation = Explainer.forSystem(name: PathRules.bundleDisplayName(key), path: key, isOtherUser: false)
+            explanation = Explainer.forSystem(name: PathRules.bundleDisplayName(key), path: key, isOtherUser: false, title: title)
         } else {
             explanation = Explainer.forApp(bundleID: bundleID, name: title, isBackground: category == .background, info: info)
         }

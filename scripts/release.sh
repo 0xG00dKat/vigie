@@ -22,7 +22,8 @@ if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then echo "L'étiquett
 grep -q "^## $VERSION" CHANGELOG.md || { echo "CHANGELOG.md n'a pas de section « ## $VERSION »."; exit 1; }
 
 swift test
-./scripts/build-app.sh
+# Les versions publiques sont signées avec le Developer ID et notarisées par Apple (scripts/notarize.sh).
+./scripts/notarize.sh
 
 mkdir -p dist
 ZIP="dist/Vigie-$VERSION.zip"

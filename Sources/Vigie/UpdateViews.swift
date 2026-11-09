@@ -1,42 +1,68 @@
 import SwiftUI
 import VigieCore
 
-/// Menu ⚙︎ de l'en-tête : langue, mises à jour et numéro de version.
+/// Menu ⚙︎ du panneau : la fenêtre, les Réglages (dans la fenêtre), les mises à jour, le Moniteur d'activité et Quitter.
 struct SettingsMenu: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
+    /// Dans le panneau : un bouton rond, et ce qui était en bas du panneau (Moniteur d'activité, démarrage, Quitter).
+    var round = false
+    /// Dans le panneau de la barre des menus : ouvrir la fenêtre le referme.
+    var inPanel = false
+    /// Sans fond (l'en-tête du panneau en verre).
+    var plain = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        @Bindable var model = model
-        let language = Binding(
-            get: { model.languageSetting },
-            set: { model.setLanguage($0) }
-        )
         Menu {
-            Picker(tr("Langue", "Language"), selection: language) {
-                ForEach(LanguageSetting.allCases) { setting in
-                    Text(setting.label).tag(setting)
+            // Un menu court : tous les réglages sont dans la fenêtre (Réglages).
+            if inPanel {
+                // Depuis le panneau : il se referme quand la fenêtre s'ouvre.
+                Button(tr("Ouvrir dans une fenêtre", "Open in a window")) { DockPresence.openFromPanel(dismiss) }
+                Button(tr("Réglages…", "Settings…")) {
+                    model.windowPageRequest = .settings
+                    DockPresence.openFromPanel(dismiss)
+                }
+            } else {
+                OpenWindowButton()
+                Button(tr("Réglages…", "Settings…")) {
+                    model.windowPageRequest = .settings
+                    openWindow(id: VigieWindow.id)
+                    NSApp.activate()
                 }
             }
-            .pickerStyle(.inline)
-
-            Divider()
-
             Button(tr("Rechercher une mise à jour", "Check for updates")) {
                 model.checkForUpdates(manual: true)
             }
             .disabled(model.update == .checking)
-            Toggle(tr("Vérifier chaque jour", "Check every day"), isOn: $model.autoCheckUpdates)
-
+            Divider()
+            Button(tr("Ouvrir le Moniteur d'activité", "Open Activity Monitor")) { model.openActivityMonitor() }
             Divider()
 
             Text(versionLine)
+            Button(tr("Quitter Vigie", "Quit Vigie")) { NSApp.terminate(nil) }
+                .keyboardShortcut("q")
         } label: {
-            Image(systemName: "gearshape")
+            if plain {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(DS.secondaryText)
+                    .frame(width: 26, height: 26)
+            } else if round {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 11.5, weight: .medium))
+                    .foregroundStyle(DS.secondaryText)
+                    .frame(width: 26, height: 26)
+                    .background(Circle().fill(DS.well))
+            } else {
+                Image(systemName: "gearshape")
+            }
         }
-        .menuStyle(.borderlessButton)
+        .menuStyle(.button)
+        .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help(tr("Réglages : langue et mises à jour", "Settings: language and updates"))
+        .help(tr("Réglages, fenêtre et Quitter", "Settings, window and Quit"))
     }
 
     private var versionLine: String {
@@ -98,8 +124,8 @@ struct UpdateBanner: View {
                 .help(tr("Fermer", "Close"))
             }
         }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.05)))
+        .padding(12)
+        .panelSurface()
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
     }
@@ -109,13 +135,13 @@ struct UpdateBanner: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "arrow.down.circle.fill")
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(VigieTheme.accent)
                     .font(.system(size: 15))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(tr(
-                        "Vigie \(release.version) est disponible (tu as la \(current)).",
-                        "Vigie \(release.version) is available (you have \(current))."
-                    ))
+                    Text(current == "?"
+                         ? tr("Vigie \(release.version) est disponible.", "Vigie \(release.version) is available.")
+                         : tr("Vigie \(release.version) est disponible (tu as la \(current)).",
+                              "Vigie \(release.version) is available (you have \(current))."))
                     .font(.system(size: 12, weight: .semibold))
                     if !release.summary.isEmpty {
                         Text(release.summary)
@@ -131,20 +157,20 @@ struct UpdateBanner: View {
                 Button(tr("Télécharger", "Download")) {
                     model.open(release.downloadURL ?? release.pageURL)
                 }
-                .buttonStyle(PrimaryButtonStyle())
+                .buttonStyle(HUDPillButtonStyle(prominent: true))
                 Button(tr("Nouveautés", "What's new")) {
                     model.open(release.pageURL)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(HUDPillButtonStyle())
                 Spacer(minLength: 0)
                 Button(tr("Ignorer cette version", "Skip this version")) {
                     model.ignore(release)
                 }
-                .buttonStyle(.borderless)
-                .foregroundStyle(.secondary)
+                .buttonStyle(.plain)
+                .font(.system(size: 11.5, weight: .medium))
+                .foregroundStyle(DS.secondaryText)
             }
-            .controlSize(.small)
-            .font(.system(size: 11))
+            .padding(.top, 2)
             Text(tr(
                 "Remplace ensuite Vigie dans Applications. Compilée toi-même ? git pull puis ./scripts/build-app.sh.",
                 "Then replace Vigie in Applications. Built it yourself? git pull, then ./scripts/build-app.sh."
@@ -153,9 +179,9 @@ struct UpdateBanner: View {
             .foregroundStyle(.tertiary)
             .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(0.10)))
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.accentColor.opacity(0.35)))
+        // Une carte de verre, comme le reste de la fenêtre.
+        .padding(WindowGrid.cardPadding)
+        .panelSurface()
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
     }
@@ -171,7 +197,7 @@ struct PrimaryButtonStyle: ButtonStyle {
             .padding(.vertical, 3)
             .background(
                 RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(Color.accentColor.opacity(configuration.isPressed ? 0.75 : 1))
+                    .fill(VigieTheme.accent.opacity(configuration.isPressed ? 0.75 : 1))
             )
             .contentShape(Rectangle())
     }

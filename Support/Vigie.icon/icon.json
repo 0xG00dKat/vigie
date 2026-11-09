@@ -1,0 +1,74 @@
+{
+  "fill": {
+    "automatic-gradient": "srgb:0.16000,0.16000,0.16000,1.00000"
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "glass": true,
+          "image-name": "4-iris.svg",
+          "name": "Iris",
+          "position": {
+            "scale": 0.92,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "glass": true,
+          "image-name": "3-paupiere-basse.svg",
+          "name": "Paupi\u00e8re basse",
+          "position": {
+            "scale": 0.92,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "glass": true,
+          "image-name": "2-paupiere-gauche.svg",
+          "name": "Paupi\u00e8re gauche",
+          "position": {
+            "scale": 0.92,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "glass": true,
+          "image-name": "1-paupiere-haute.svg",
+          "name": "Paupi\u00e8re haute",
+          "position": {
+            "scale": 0.92,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.6
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "lighting": "individual",
+      "specular": true
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "macOS"
+    ]
+  }
+}

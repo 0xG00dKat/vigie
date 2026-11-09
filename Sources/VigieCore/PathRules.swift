@@ -85,10 +85,13 @@ public enum PathRules {
         return base
     }
 
-    /// Nom du paquet sans « .app ».
+    /// Nom du paquet sans son extension (« .app », « .xpc », « .appex »).
     public static func bundleDisplayName(_ bundlePath: String) -> String {
-        let last = lastComponent(bundlePath)
-        return cleanName(last.hasSuffix(".app") ? String(last.dropLast(4)) : last)
+        var last = lastComponent(bundlePath)
+        for suffix in [".app", ".xpc", ".appex"] where last.hasSuffix(suffix) {
+            last = String(last.dropLast(suffix.count))
+        }
+        return cleanName(last)
     }
 
     /// Retire les caractères invisibles de direction (WhatsApp nomme son app « \u{200E}WhatsApp »).

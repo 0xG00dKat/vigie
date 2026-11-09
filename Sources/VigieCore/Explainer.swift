@@ -697,10 +697,100 @@ public enum Explainer {
         "zsh": shell,
         "bash": shell,
         "login": L("Ouverture d'une session de terminal.", "Opens a terminal session."),
+        // Ajouts : services fréquents dont le rôle est sûr. Les autres gardent une description générique.
+        "XProtect": L("L'antivirus intégré de macOS.", "macOS's built-in antivirus."),
+        "XProtectPluginService": L("L'antivirus intégré de macOS.", "macOS's built-in antivirus."),
+        "Siri": L("Siri.", "Siri."),
+        "Software Update": L("Mises à jour de macOS.", "macOS updates."),
+        "SoftwareUpdateNotificationManager": L("Notifications de mise à jour de macOS.", "macOS update notifications."),
+        "com.apple.geod": L("Plans et localisation : données de cartes et d'adresses pour les apps.", "Maps and location: map and address data for apps."),
+        "geod": L("Plans et localisation : données de cartes et d'adresses pour les apps.", "Maps and location: map and address data for apps."),
+        "pkd": L("Gère les extensions d'apps (widgets, partage, aperçus…).", "Manages app extensions (widgets, sharing, previews…)."),
+        "ANECompilerService": L("Prépare les modèles d'IA pour la puce Neural Engine.", "Prepares AI models for the Neural Engine chip."),
+        "ANEStorageMaintainer": L("Fait le ménage dans le cache des modèles du Neural Engine.", "Cleans up the Neural Engine model cache."),
+        "AppIntentsLiveEntityService": L("Actions d'apps proposées à Raccourcis et à Siri.", "App actions offered to Shortcuts and Siri."),
+        "AssetCacheLocatorService": L(
+            "Cherche un serveur de mise en cache sur le réseau, pour télécharger plus vite les mises à jour et les apps.",
+            "Looks for a caching server on the network, to download updates and apps faster."
+        ),
+        "AudioComponentRegistrar": L("Tient la liste des modules audio installés (Audio Units).", "Keeps the list of installed audio plug-ins (Audio Units)."),
+        "IOUserBluetoothSerialDriver": L("Pilote Bluetooth (liaison série).", "Bluetooth driver (serial link)."),
+        "ViewBridgeAuxiliary": L(
+            "Affiche des éléments d'interface du système dans les apps (panneaux, sélecteurs).",
+            "Shows system interface pieces inside apps (panels, pickers)."
+        ),
+        "com.apple.accessibility.mediaaccessibilityd": L("Préférences de sous-titres et d'audiodescription.", "Subtitle and audio description preferences."),
+        "coreauthd": L("Authentification locale : Touch ID et mot de passe.", "Local authentication: Touch ID and password."),
+        "ctkd": L("Cartes à puce et clés de sécurité.", "Smart cards and security keys."),
+        "dprivacyd": L("Statistiques d'usage anonymisées envoyées à Apple (si tu l'as accepté).", "Anonymized usage statistics sent to Apple (if you agreed)."),
+        "systemstats": L("Statistiques d'énergie et d'usage du système.", "System energy and usage statistics."),
+        "sysmond": L("Fournit les statistiques du système au Moniteur d'activité.", "Provides system statistics to Activity Monitor."),
+        "spindump": L("Rapport de diagnostic quand une app ne répond plus.", "Diagnostic report when an app stops responding."),
+        "ScreenTimeSettingsAgent": L("Temps d'écran.", "Screen Time."),
+        "com.apple.StreamingUnzipService": L("Décompresse les téléchargements au fil de l'eau (apps, mises à jour).", "Unzips downloads as they arrive (apps, updates)."),
+        "appleaccountd": L("Gère ton compte Apple.", "Manages your Apple Account."),
+        "avconferenced": L("Appels FaceTime (audio et vidéo).", "FaceTime calls (audio and video)."),
+        "heard": L("Fonctions d'audition (niveaux sonores, écouteurs).", "Hearing features (sound levels, headphones)."),
+        "itunescloudd": L("Bibliothèque musicale iCloud (Musique, achats).", "iCloud music library (Music, purchases)."),
+        "naturallanguaged": L("Analyse du langage dans les textes, pour les fonctions du système.", "Analyzes language in text, for system features."),
+        "parsecd": L("Suggestions de Spotlight et de Siri.", "Spotlight and Siri suggestions."),
+        "storekitagent": L("Achats intégrés aux apps (App Store).", "In-app purchases (App Store)."),
+        "tipsd": L("App Astuces.", "Tips app."),
+        "translationd": L("Traduction intégrée.", "Built-in translation."),
+        "CoreLocationAgent": L("Demandes d'autorisation de localisation.", "Location permission prompts."),
+        "TextInputSwitcher": L("Changement de langue du clavier.", "Switches keyboard input sources."),
+        "Shortcuts Events": L("Automatisations de Raccourcis.", "Shortcuts automations."),
+        "financed": L("Données financières de Cartes (Wallet).", "Wallet financial data."),
+        "generativeexperiencesd": L("Apple Intelligence : fonctions génératives.", "Apple Intelligence: generative features."),
+        "networkserviceproxy": L("Proxy réseau du système (dont le relais privé iCloud).", "System network proxy (including iCloud Private Relay)."),
+        "passd": L("Cartes (Wallet) et Apple Pay.", "Wallet and Apple Pay."),
+        "MobileDeviceUpdater": L("Mises à jour des iPhone et iPad branchés au Mac.", "Updates for iPhones and iPads connected to the Mac."),
+        "CGPDFService": L("Affichage des PDF.", "PDF rendering."),
+        "nsattributedstringagent": L("Convertit les documents de texte enrichi.", "Converts rich-text documents."),
+        "LinkedNotesUIService": L("Note rapide.", "Quick Note."),
+        "corespeechd": L("Reconnaissance vocale de Siri (« Dis Siri »).", "Siri speech recognition (“Hey Siri”)."),
+        "donotdisturbd": L("Modes de concentration (Ne pas déranger).", "Focus modes (Do Not Disturb)."),
+        "replayd": L("Enregistrement et partage de l'écran.", "Screen recording and sharing."),
+        "AuthenticationServicesAgent": L(
+            "Connexion aux sites et aux apps : clés d'identification, « Se connecter avec Apple ».",
+            "Signing in to sites and apps: passkeys, Sign in with Apple."
+        ),
+        "Single Sign-On": L("Connexion unique d'entreprise (SSO).", "Enterprise single sign-on (SSO)."),
+        "AutoFill": L("Remplissage automatique des mots de passe et des formulaires.", "Password and form autofill."),
+        "Screenshot": L("Captures d'écran (⌘⇧5).", "Screenshots (⌘⇧5)."),
+        "Wi-Fi": L("Menu Wi-Fi de la barre des menus.", "Wi-Fi menu in the menu bar."),
+        "Open and Save Panel Service": L("Fenêtre « Ouvrir / Enregistrer » d'une app.", "An app's Open / Save dialog."),
     ]
 
-    public static func forSystem(name: String, path: String, isOtherUser: Bool) -> Explanation {
-        if let text = system[name] { return Explanation(text.text) }
+    /// Sépare « AutoFill (Opera) » en « AutoFill » et « Opera » : macOS nomme ainsi certains services
+    /// d'après l'app qui les utilise.
+    static func splitClient(_ title: String) -> (base: String, client: String?) {
+        guard title.hasSuffix(")"), let open = title.lastIndex(of: "("), open > title.startIndex else { return (title, nil) }
+        let base = title[..<open].trimmingCharacters(in: .whitespaces)
+        let client = title[title.index(after: open)..<title.index(before: title.endIndex)].trimmingCharacters(in: .whitespaces)
+        return base.isEmpty || client.isEmpty ? (title, nil) : (base, client)
+    }
+
+    public static func forSystem(name: String, path: String, isOtherUser: Bool, title: String? = nil) -> Explanation {
+        let split: (base: String, client: String?) = title.map(splitClient) ?? (name, nil)
+        let usedBy = split.client.map { tr(" Utilisé par \($0).", " Used by \($0).") } ?? ""
+        for candidate in [name, split.base] {
+            if let text = system[candidate] { return Explanation(text.text + usedBy) }
+        }
+        // Familles reconnues à leur emplacement.
+        if path.contains("/RemoteManagement.framework/") || name.hasSuffix("Subscriber") {
+            return Explanation(tr(
+                "Gestion des réglages et profils de configuration de macOS (appareils gérés par une entreprise ou une école). Il tourne aussi sur un Mac personnel.",
+                "Handles macOS settings and configuration profiles (devices managed by a company or school). It also runs on personal Macs."
+            ))
+        }
+        if path.hasPrefix("/System/Applications/") && path.hasSuffix(".app") {
+            let app = split.base
+            return Explanation(tr(
+                "Widgets et raccourcis de l'app \(app) d'Apple : ils tournent même quand l'app est fermée.",
+                "Widgets and shortcuts of Apple's \(app) app: they run even when the app is closed."
+            ))
+        }
         if isOtherUser && !path.isEmpty && !PathRules.isSystem(path) {
             return Explanation(tr(
                 "Service installé par une app tierce, lancé avec les droits administrateur.",

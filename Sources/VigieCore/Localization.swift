@@ -42,9 +42,29 @@ public enum Localization {
     }
 }
 
+/// Mode Simple : des mots de tous les jours à la place du vocabulaire technique (« Fichiers temporaires »
+/// plutôt que « Caches »). Réglé par l'app, lu partout comme la langue : protégé par un verrou.
+public enum Wording {
+    private static let lock = NSLock()
+    private static var storage = false
+
+    public static var simple: Bool {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return storage
+        }
+        set {
+            lock.lock()
+            storage = newValue
+            lock.unlock()
+        }
+    }
+}
+
 /// Un texte en français et en anglais. Les deux sont obligatoires : un texte non traduit ne compile pas.
 /// Pour ajouter une langue, ajouter un champ ici puis suivre les erreurs du compilateur.
-public struct L: Sendable, Hashable {
+public struct L: Sendable, Hashable, Codable {
     public let fr: String
     public let en: String
 

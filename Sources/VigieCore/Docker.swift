@@ -351,3 +351,57 @@ public enum DockerReader {
         return UInt64((number * factor).rounded())
     }
 }
+
+// MARK: - Volumes orphelins
+
+/// Un volume Docker qu'aucun conteneur (même arrêté) n'utilise plus.
+/// Vigie ne supprime jamais de volume : il peut contenir la base de données d'un projet. Elle le montre, dit d'où
+/// il vient, et donne la commande à copier.
+public struct DockerVolume: Sendable, Equatable, Identifiable {
+    public var id: String { name }
+    public var name: String
+    public var size: UInt64
+    /// Projet Docker Compose qui l'a créé.
+    public var project: String?
+    /// Volume anonyme (créé sans nom par un conteneur) : presque toujours un reste sans valeur.
+    public var isAnonymous: Bool
+
+    public init(name: String, size: UInt64, project: String? = nil, isAnonymous: Bool = false) {
+        self.name = name
+        self.size = size
+        self.project = project
+        self.isAnonymous = isAnonymous
+    }
+
+    public var removeCommand: String { "docker volume rm \(name)" }
+}
+
+extension DockerReader {
+    /// Volumes sans conteneur (`docker system df -v`), du plus gros au plus petit. Vide si Docker ne tourne pas.
+    public static func orphanVolumes(home: String = NSHomeDirectory()) -> [DockerVolume] {
+        guard let cli = findCLI(home: home) else { return [] }
+        let result = run(cli, ["system", "df", "-v", "--format", "{{json .}}"], timeout: 15)
+        guard result.status == 0 else { return [] }
+        return parseOrphanVolumes(result.output)
+    }
+
+    public static func parseOrphanVolumes(_ text: String) -> [DockerVolume] {
+        guard let data = text.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let volumes = json["Volumes"] as? [[String: Any]] else { return [] }
+        return volumes.compactMap { volume -> DockerVolume? in
+            guard let name = volume["Name"] as? String else { return nil }
+            let links = Int("\(volume["Links"] ?? "0")") ?? 0
+            guard links == 0 else { return nil }
+            var labels: [String: String] = [:]
+            for pair in ((volume["Labels"] as? String) ?? "").split(separator: ",") {
+                let parts = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+                labels[String(parts[0])] = parts.count > 1 ? String(parts[1]) : ""
+            }
+            return DockerVolume(name: name, size: parseSize((volume["Size"] as? String) ?? "") ?? 0,
+                                project: labels["com.docker.compose.project"],
+                                isAnonymous: labels["com.docker.volume.anonymous"] != nil)
+        }
+        .sorted { $0.size > $1.size }
+    }
+}

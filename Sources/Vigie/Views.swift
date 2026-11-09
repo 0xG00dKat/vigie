@@ -6,23 +6,10 @@ struct MainPanel: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        VStack(spacing: 0) {
-            HeaderView()
-            Divider()
-            if model.snapshot == nil {
-                ProgressView(tr("Lecture des processus…", "Reading processes…"))
-                    .controlSize(.small)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                GroupListView()
-            }
-            Divider()
-            FooterView()
-        }
-        // Changer de langue reconstruit tout le panneau avec les nouveaux textes.
-        .id(model.language)
-        .frame(width: 460, height: 640)
-        .background(WindowVisibilityObserver { model.setVisible($0) })
+        GlassPanel()
+            // Changer de langue reconstruit tout le panneau avec les nouveaux textes.
+            .id(model.viewIdentity)
+            .background(WindowVisibilityObserver { model.setSurface("panneau", visible: $0) })
     }
 }
 
@@ -38,6 +25,8 @@ struct HeaderView: View {
                 Text("Vigie")
                     .font(.system(size: 15, weight: .semibold))
                 Spacer()
+                ModePicker()
+                OpenWindowIconButton()
                 SettingsMenu()
                 Button {
                     model.refreshAndReorder()
@@ -48,27 +37,38 @@ struct HeaderView: View {
                 .help(tr("Actualiser et retrier", "Refresh and re-sort"))
             }
 
-            HStack(spacing: 14) {
+            // Mémoire et disque en deux petites cartes, avec la même couleur d'état que la vue d'ensemble de la fenêtre.
+            HStack(spacing: 8) {
                 if let snapshot = model.snapshot {
-                    MemoryGauge(used: snapshot.memoryUsed, total: snapshot.memoryTotal)
+                    let pressure = model.performance?.memory.pressure ?? .normal
+                    PanelGaugeCard(symbol: "memorychip", title: tr("Mémoire", "Memory"),
+                                   value: "\(Format.bytes(snapshot.memoryUsed)) / \(Format.bytes(snapshot.memoryTotal))",
+                                   ratio: Double(snapshot.memoryUsed) / Double(max(snapshot.memoryTotal, 1)),
+                                   tint: pressure == .critical ? DS.urgent : pressure == .warning ? DS.review : DS.safe)
+                        .help(tr("Mémoire utilisée, comme dans le Moniteur d'activité", "Memory used, as in Activity Monitor"))
                 }
                 if let disk = model.disk {
-                    DiskGauge(disk: disk)
+                    PanelGaugeCard(symbol: "internaldrive", title: tr("Disque", "Disk"),
+                                   value: tr("\(Format.bytes(disk.available, decimal: true)) libres", "\(Format.bytes(disk.available, decimal: true)) free"),
+                                   ratio: 1 - disk.freeRatio,
+                                   tint: disk.isLow ? DS.urgent : disk.isTight ? DS.review : DS.safe)
+                        .help(tr("Espace libre : \(Format.bytes(disk.available, decimal: true)) sur \(Format.bytes(disk.total, decimal: true)) (\(disk.freePercent) %). Vigie prévient sous 15 %.",
+                                 "Free space: \(Format.bytes(disk.available, decimal: true)) of \(Format.bytes(disk.total, decimal: true)) (\(disk.freePercent)%). Vigie warns you below 15%."))
                 }
-                Spacer(minLength: 0)
             }
 
-            if let snapshot = model.snapshot {
+            if model.mode == .processes, let snapshot = model.snapshot {
                 Text(summary(snapshot))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            if model.mode == .processes {
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField(tr("Rechercher une app, un projet, un port…", "Search an app, a project, a port…"), text: $model.query)
+                TextField(model.isDeveloper ? tr("Rechercher une app, un projet, un port…", "Search an app, a project, a port…") : tr("Rechercher une app…", "Search an app…"), text: $model.query)
                     .textFieldStyle(.plain)
                 if model.isSearching {
                     Button {
@@ -84,21 +84,57 @@ struct HeaderView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
             .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.07)))
+            }
         }
         .padding(12)
     }
 
     private func summary(_ snapshot: Snapshot) -> String {
-        let apps = model.count(in: .apps)
-        let dev = model.count(in: .dev)
-        let background = model.count(in: .background)
-        let systemProcesses = snapshot.groups(in: .system).reduce(0) { $0 + $1.processes.count }
-        let total = Format.processes(snapshot.processCount)
-        let others = Format.count(systemProcesses)
-        return tr(
-            "\(total) en tout, rangés en \(apps) apps, \(dev) groupes de dev et \(background) utilitaires. Les \(others) autres appartiennent à macOS.",
-            "\(total) in total, sorted into \(apps) apps, \(dev) dev groups and \(background) utilities. The other \(others) belong to macOS."
-        )
+        model.processSummary(snapshot)
+    }
+}
+
+extension View {
+    /// Les lignes d'une famille du panneau dans une carte arrondie, comme les cases de la fenêtre.
+    func panelCard() -> some View {
+        self
+            .panelSurface()
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+    }
+}
+
+/// Petite carte du panneau : icône, nom, valeur, et une barre de la couleur de l'état.
+struct PanelGaugeCard: View {
+    let symbol: String
+    let title: String
+    let value: String
+    let ratio: Double
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 9) {
+            VigieTile(symbol: symbol, size: 24)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(title).font(.system(size: 11)).foregroundStyle(.secondary)
+                    Spacer(minLength: 4)
+                    Text(value).font(.system(size: 11.5, weight: .semibold)).monospacedDigit().lineLimit(1)
+                }
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.primary.opacity(0.08))
+                        Capsule().fill(tint).frame(width: geometry.size.width * min(1, max(0, ratio)))
+                    }
+                }
+                .frame(height: 5)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(DS.surface))
+        .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(DS.stroke, lineWidth: 0.5))
     }
 }
 
@@ -134,13 +170,18 @@ struct GroupListView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                if let disk = model.disk, disk.isLow, !model.isSearching {
+                if !model.isDeveloper, !model.isSearching {
+                    // Mode Simple : l'état du Mac d'abord, avec une seule action.
+                    StatusCard(compact: true)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                } else if let disk = model.disk, disk.isLow, !model.isSearching {
                     LowDiskBanner(disk: disk)
                 }
                 if let update = model.visibleUpdate, !model.isSearching {
                     UpdateBanner(state: update)
                 }
-                ForEach(ProcessCategory.allCases) { category in
+                ForEach(model.visibleCategories) { category in
                     let groups = model.visibleGroups(in: category)
                     if !groups.isEmpty {
                         Section {
@@ -152,10 +193,14 @@ struct GroupListView: View {
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
                                 }
-                                ForEach(groups) { group in
-                                    GroupRow(group: group)
-                                    Divider().padding(.leading, 50)
+                                // Une carte arrondie par famille, comme les cases de la fenêtre.
+                                VStack(spacing: 0) {
+                                    ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
+                                        if index > 0 { Divider().padding(.leading, 50) }
+                                        GroupRow(group: group)
+                                    }
                                 }
+                                .panelCard()
                             }
                         } header: {
                             SectionHeaderView(category: category, groups: groups)
@@ -194,14 +239,14 @@ struct SectionHeaderView: View {
                         .font(.system(size: 8.5, weight: .bold))
                         .rotationEffect(.degrees(open ? 90 : 0))
                         .frame(width: 10)
-                    Text(category.title.uppercased())
-                        .font(.system(size: 10.5, weight: .semibold))
+                    Text(category.title)
+                        .font(.system(size: 12, weight: .semibold))
                     Text("\(groups.count)")
-                        .font(.system(size: 10.5))
+                        .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                     if memory > 0 {
                         Text("· \(Format.bytes(memory))")
-                            .font(.system(size: 10.5))
+                            .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -216,9 +261,11 @@ struct SectionHeaderView: View {
                 BulkCloseButton(category: category, groups: groups)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(.bar)
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 6)
+        // Fond du panneau : opaque pour que les lignes ne se voient pas dessous quand le titre reste en haut.
+        .background(DS.canvas)
     }
 }
 
@@ -280,10 +327,11 @@ struct GroupRow: View {
                         Text(group.title)
                             .font(.system(size: 12.5, weight: .semibold))
                             .lineLimit(1)
-                        ForEach(group.ports.prefix(3), id: \.self) { port in
-                            PortBadge(port: port)
+                        // Les ports ne parlent qu'aux développeurs.
+                        ForEach(model.isDeveloper ? Array(group.ports.prefix(3)) : [], id: \.self) { port in
+                            PortBadge(port: port, exposed: group.exposedPorts.contains(port))
                         }
-                        if group.ports.count > 3 {
+                        if model.isDeveloper && group.ports.count > 3 {
                             Text("+\(group.ports.count - 3)").font(.system(size: 9.5)).foregroundStyle(.secondary)
                         }
                         if group.isProtected && group.category != .system {
@@ -298,6 +346,7 @@ struct GroupRow: View {
                         .font(.system(size: 10.5))
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
+                    if let job = model.relauncher(for: group) { RelaunchLine(job: job) }
                 }
                 Spacer(minLength: 4)
                 HStack(spacing: 8) {
@@ -305,13 +354,12 @@ struct GroupRow: View {
                         Text(Format.bytes(group.memory))
                             .font(.system(size: 11.5, weight: .medium))
                             .monospacedDigit()
-                            .foregroundStyle(group.memory > 2 * 1_073_741_824 ? Color.orange : Color.secondary)
+                            // L'orange est réservé à « à vérifier » : une grosse mémoire est juste plus foncée.
+                            .foregroundStyle(group.memory > 2 * 1_073_741_824 ? Color.primary : Color.secondary)
                             .help(tr("Mémoire utilisée par l'ensemble de ses processus", "Memory used by all of its processes"))
                     }
                     if group.close.isAllowed && !group.isProtected {
-                        CloseControl(key: group.id, verb: group.category == .dev ? tr("Arrêter", "Stop") : tr("Quitter", "Quit")) {
-                            model.confirmClose(group.id, methods: [group.close])
-                        }
+                        GroupCloseControl(group: group)
                     } else if group.category != .system {
                         Color.clear.frame(width: 17, height: 17)
                     }
@@ -331,6 +379,11 @@ struct GroupRow: View {
     }
 
     private var metaLine: String {
+        if !model.isDeveloper {
+            // Mode Simple : seulement depuis quand, en mots simples.
+            guard let start = group.startTime, group.category != .system else { return "" }
+            return tr("ouverte \(Format.uptime(since: start))", "open \(Format.uptime(since: start))")
+        }
         var parts = [Format.processes(group.processes.count)]
         if let cpu = Format.cpu(group.cpuPercent) { parts.append(cpu) }
         if let start = group.startTime, group.category != .system { parts.append(Format.uptime(since: start)) }
@@ -386,6 +439,8 @@ struct ExplanationLine: View {
 
 struct PortBadge: View {
     let port: Int
+    /// Joignable depuis le réseau : en orange, avec l'explication au survol.
+    var exposed = false
 
     var body: some View {
         Button {
@@ -393,15 +448,20 @@ struct PortBadge: View {
                 NSWorkspace.shared.open(url)
             }
         } label: {
-            Text(":\(String(port))")
-                .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                .padding(.horizontal, 4)
-                .padding(.vertical, 1)
-                .background(Capsule().fill(Color.accentColor.opacity(0.15)))
-                .foregroundStyle(Color.accentColor)
+            HStack(spacing: 2) {
+                if exposed { Image(systemName: "wifi").font(.system(size: 7.5, weight: .bold)) }
+                Text(":\(String(port))")
+            }
+            .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1)
+            .background(Capsule().fill((exposed ? Color.orange : VigieTheme.accent).opacity(0.15)))
+            .foregroundStyle(exposed ? Color.orange : VigieTheme.accent)
         }
         .buttonStyle(.plain)
-        .help(tr("Ouvrir http://localhost:\(String(port)) dans le navigateur", "Open http://localhost:\(String(port)) in your browser"))
+        .help(exposed
+              ? tr("Visible sur le réseau. ", "Visible on the network. ") + PortMap.exposedAdvice.text
+              : tr("Ouvrir http://localhost:\(String(port)) dans le navigateur", "Open http://localhost:\(String(port)) in your browser"))
     }
 }
 
@@ -459,6 +519,16 @@ struct ExpandedDetails: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            if !model.isDeveloper {
+                // Mode Simple : pas la liste brute des processus, juste ce qu'elle veut dire.
+                Text(group.processes.count > 1
+                     ? tr("\(group.processes.count) petits programmes travaillent pour \(group.title) (fenêtres, onglets, extensions). Quitter l'app les arrête tous.",
+                          "\(group.processes.count) small programs work for \(group.title) (windows, tabs, extensions). Quitting the app stops them all.")
+                     : tr("Un seul programme, sans rien d'autre autour.", "A single program, nothing else around it."))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
             if let location = group.location {
                 Label(location, systemImage: group.category == .dev ? "folder" : "shippingbox")
                     .font(.system(size: 10.5))
@@ -479,6 +549,7 @@ struct ExpandedDetails: View {
             }
             .padding(6)
             .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
+            }
 
             HStack(spacing: 10) {
                 Button {
@@ -492,6 +563,17 @@ struct ExpandedDetails: View {
                     model.reveal(group)
                 } label: {
                     Label(tr("Afficher dans le Finder", "Show in Finder"), systemImage: "folder")
+                }
+                // Pour signaler un serveur bloqué : PID, ports, dossier du projet, durée, commande d'arrêt.
+                if model.isDeveloper, group.category == .dev || !group.ports.isEmpty {
+                    Button {
+                        model.copyInfo(group)
+                    } label: {
+                        Label(model.copiedCommand == "info:" + group.id ? tr("Copié ✓", "Copied ✓") : tr("Copier les infos", "Copy details"),
+                              systemImage: "doc.on.doc")
+                    }
+                    .help(tr("PID, ports, dossier du projet, durée et commande d'arrêt, pour signaler un serveur bloqué. Jamais les arguments.",
+                             "PID, ports, project folder, uptime and stop command, to report a stuck server. Never the arguments."))
                 }
             }
             .buttonStyle(.borderless)
@@ -515,7 +597,7 @@ struct ProcessLine: View {
                 .font(.system(size: 11, weight: .medium))
                 .lineLimit(1)
                 .layoutPriority(1)
-            if let command = Explainer.commandSummary(process) {
+            if model.isDeveloper, let command = Explainer.commandSummary(process) {
                 Text(command)
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.secondary)
@@ -523,7 +605,7 @@ struct ProcessLine: View {
                     .truncationMode(.middle)
             }
             Spacer(minLength: 4)
-            ForEach(process.listeningPorts.prefix(2), id: \.self) { PortBadge(port: $0) }
+            ForEach(model.isDeveloper ? Array(process.listeningPorts.prefix(2)) : [], id: \.self) { PortBadge(port: $0, exposed: process.exposedPorts.contains($0)) }
             if let memory = process.memory {
                 Text(Format.bytes(memory))
                     .font(.system(size: 10.5))
@@ -567,14 +649,8 @@ struct GroupIcon: View {
                 .interpolation(.high)
                 .frame(width: 28, height: 28)
         } else {
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .fill(tint.gradient)
-                .frame(width: 26, height: 26)
-                .overlay {
-                    Image(systemName: symbol)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
+            // Pas d'icône d'app : la tuile de Vigie, gris foncé comme partout.
+            VigieTile(symbol: symbol, size: 26)
                 .padding(1)
         }
     }
@@ -592,17 +668,6 @@ struct GroupIcon: View {
         }
     }
 
-    private var tint: Color {
-        switch group.category {
-        case .dev:
-            let names = Set(group.processes.map(\.name))
-            if names.contains("claude") { return .orange }
-            return group.directory != nil ? .teal : .indigo
-        case .system: return .gray
-        case .background: return .purple
-        case .apps: return .blue
-        }
-    }
 }
 
 // MARK: - Pied de page
