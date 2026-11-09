@@ -1,6 +1,7 @@
 #!/bin/bash
-# Prépare une version de Vigie : vérifications, tests, construction, archive .zip et notes de version.
-# Avec --publish, crée aussi l'étiquette Git et la version sur GitHub (avec le .zip).
+# Prépare une version de Vigie : vérifications, tests, construction, image disque .dmg (notarisée), archive .zip
+# et notes de version. Avec --publish, crée aussi l'étiquette Git et la version sur GitHub (avec le .dmg et le .zip).
+# Le .dmg sert à la première installation ; le .zip aux mises à jour (les versions déjà installées cherchent un .zip).
 #
 # Usage : ./scripts/release.sh 0.2.0 [--publish]
 #
@@ -34,13 +35,24 @@ ditto -c -k --keepParent build/Vigie.app "$ZIP"
 # Notes : la section de cette version dans CHANGELOG.md, jusqu'à la section suivante.
 awk -v head="## $VERSION" '/^## / { if (found) exit; if (index($0, head) == 1) { found = 1; next } } found' CHANGELOG.md > "$NOTES"
 
-echo "Prêt : $ZIP ($(du -h "$ZIP" | cut -f1)) et $NOTES"
+# Image disque : fenêtre sur fond noir, Vigie à glisser dans Applications. Notarisée à part (Apple vérifie le .dmg).
+DMG="dist/Vigie-$VERSION.dmg"
+./scripts/make-dmg.sh "$VERSION"
+PROFILE="${VIGIE_NOTARY_PROFILE:-vigie}"
+echo "Envoi du .dmg à Apple pour notarisation (quelques minutes)…"
+xcrun notarytool submit "$DMG" --keychain-profile "$PROFILE" --wait | tee dist/notarisation-dmg.log
+grep -q "status: Accepted" dist/notarisation-dmg.log || { echo "Notarisation du .dmg refusée : voir dist/notarisation-dmg.log."; exit 1; }
+xcrun stapler staple "$DMG"
+xcrun stapler validate "$DMG"
+spctl --assess --type open --context context:primary-signature --verbose=2 "$DMG"
+
+echo "Prêt : $DMG ($(du -h "$DMG" | cut -f1)), $ZIP ($(du -h "$ZIP" | cut -f1)) et $NOTES"
 
 if [ "$PUBLISH" = "--publish" ]; then
     git tag -a "$TAG" -m "Vigie $VERSION"
     # Envoi avec la connexion de la commande gh (pas besoin de clé SSH).
     git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push origin "$TAG"
-    gh release create "$TAG" "$ZIP" --title "Vigie $VERSION" --notes-file "$NOTES"
+    gh release create "$TAG" "$DMG" "$ZIP" --title "Vigie $VERSION" --notes-file "$NOTES"
     echo "Publié : $(gh release view "$TAG" --json url --jq .url)"
 else
     echo "Pour publier : ./scripts/release.sh $VERSION --publish"

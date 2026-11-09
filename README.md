@@ -69,7 +69,7 @@ Requirements: macOS 14 or later.
 
 ### Download
 
-1. Download `Vigie-x.y.z.zip` from the [latest release](https://github.com/0xG00dKat/vigie/releases/latest), unzip it and move `Vigie.app` to Applications.
+1. Download `Vigie-x.y.z.dmg` from the [latest release](https://github.com/0xG00dKat/vigie/releases/latest), open it and drag Vigie to the Applications folder. (A `.zip` is also available: unzip it and move `Vigie.app` to Applications.)
 2. Open it: Vigie is signed and notarized by Apple, so it opens without any warning. Its eye appears in the menu bar.
 
 ### Build from source

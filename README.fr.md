@@ -69,7 +69,7 @@ Prérequis : macOS 14 ou plus récent.
 
 ### Télécharger
 
-1. Télécharge `Vigie-x.y.z.zip` depuis la [dernière version publiée](https://github.com/0xG00dKat/vigie/releases/latest), décompresse-le et range `Vigie.app` dans Applications.
+1. Télécharge `Vigie-x.y.z.dmg` depuis la [dernière version publiée](https://github.com/0xG00dKat/vigie/releases/latest), ouvre-le et glisse Vigie dans le dossier Applications. (Un `.zip` est aussi proposé : décompresse-le et range `Vigie.app` dans Applications.)
 2. Ouvre-la : Vigie est signée et notarisée par Apple, elle s'ouvre sans alerte. Son œil apparaît dans la barre des menus.
 
 ### Compiler depuis les sources
