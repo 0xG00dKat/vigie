@@ -551,7 +551,9 @@ enum Debug {
         let host = NSHostingView(rootView: root)
         // `--height N` : une capture plus haute (pour voir le bas d'une page).
         let height = options.firstIndex(of: "--height").flatMap { $0 + 1 < options.count ? Double(options[$0 + 1]) : nil }
-        host.frame = windowPage == nil ? NSRect(x: 0, y: 0, width: 460, height: height ?? 640) : NSRect(x: 0, y: 0, width: 1200, height: height ?? 760)
+        // `--width N` : une fenêtre plus large (pour voir une page sur grand écran).
+        let width = options.firstIndex(of: "--width").flatMap { $0 + 1 < options.count ? Double(options[$0 + 1]) : nil }
+        host.frame = windowPage == nil ? NSRect(x: 0, y: 0, width: 460, height: height ?? 640) : NSRect(x: 0, y: 0, width: width ?? 1200, height: height ?? 760)
         if options.contains("--dark") {
             host.appearance = NSAppearance(named: .darkAqua)
         } else {

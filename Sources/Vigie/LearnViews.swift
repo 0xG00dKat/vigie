@@ -558,6 +558,15 @@ struct LessonArticle: View {
     @Environment(AppModel.self) private var model
     let lesson: Lesson
     @Binding var page: WindowPage?
+    /// Largeur disponible : le parcours à gauche n'apparaît que si la fenêtre est assez large.
+    @State private var width: CGFloat = 0
+
+    /// Parcours (220) + texte (620) + chiffres (280), et leurs deux écarts.
+    private static let pathWidth: CGFloat = 220
+    private static let readingWidth: CGFloat = 620
+    private static let liveWidth: CGFloat = 280
+    /// En dessous, le texte serait trop étroit pour trois colonnes : on garde texte + chiffres.
+    private static let threeColumnsMin: CGFloat = 1080
 
     /// La question en cours de lecture, si l'explication en fait partie.
     private var path: (question: LessonQuestion, lessons: [Lesson], index: Int)? {
@@ -569,6 +578,11 @@ struct LessonArticle: View {
 
     var body: some View {
         let path = path
+        let showPath = width >= Self.threeColumnsMin
+        // Les étapes de la question, ou, hors parcours, les explications du même thème.
+        let steps = path?.lessons ?? Lessons.visible(developer: model.isDeveloper).filter { $0.topic == lesson.topic }
+        let gap: CGFloat = 20
+        let blockWidth = (showPath ? Self.pathWidth + gap : 0) + Self.readingWidth + gap + Self.liveWidth
         VStack(alignment: .leading, spacing: 16) {
             LearnHeader(symbol: lesson.symbol,
                         eyebrow: path.map { tr("\($0.question.title.text) · \($0.index + 1) sur \($0.lessons.count)",
@@ -577,7 +591,14 @@ struct LessonArticle: View {
                         back: path?.question.title.text ?? lesson.topic.title.text) {
                 if let path { page = .learnQuestion(path.question.id) } else { page = .learnTopic(lesson.topic) }
             }
-            HStack(alignment: .top, spacing: 20) {
+            HStack(alignment: .top, spacing: gap) {
+                // À gauche : où on en est dans le parcours, et de quoi sauter d'une étape à l'autre.
+                if showPath {
+                    LessonPathColumn(title: path?.question.title.text ?? lesson.topic.title.text,
+                                     lessons: steps, current: lesson.id, page: $page)
+                        .frame(width: Self.pathWidth)
+                        .transition(.opacity)
+                }
                 // L'explication, en colonne de lecture.
                 VStack(alignment: .leading, spacing: 14) {
                     // Un schéma vivant quand l'explication s'y prête : la mémoire ou le disque, avec tes chiffres.
@@ -597,12 +618,17 @@ struct LessonArticle: View {
                     .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(VigieTheme.accent.opacity(0.1)))
                     if let path { next(path) }
                 }
-                .frame(maxWidth: 620, alignment: .leading)
+                .frame(maxWidth: Self.readingWidth, alignment: .leading)
                 // À droite : tes chiffres, et ce que tu peux faire.
                 LessonLiveCard(lessonID: lesson.id, page: $page)
-                    .frame(width: 280)
+                    .frame(width: Self.liveWidth)
             }
         }
+        // Le bloc garde sa largeur de lecture et se centre dans les grandes fenêtres.
+        .frame(maxWidth: blockWidth, alignment: .leading)
+        .frame(maxWidth: .infinity)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        .animation(VigieMotion.standard, value: showPath)
         .onAppear { model.markLessonRead(lesson.id) }
     }
 
@@ -632,6 +658,81 @@ struct LessonArticle: View {
             }
         }
         .padding(.top, 4)
+    }
+}
+
+/// Le parcours, à gauche d'une explication : toutes les étapes, celle en cours mise en avant, celles déjà lues cochées.
+struct LessonPathColumn: View {
+    @Environment(AppModel.self) private var model
+    let title: String
+    let lessons: [Lesson]
+    let current: String
+    @Binding var page: WindowPage?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title.uppercased())
+                .font(.system(size: 10.5, weight: .semibold)).tracking(0.6)
+                .foregroundStyle(DS.secondaryText)
+                .lineLimit(2)
+                .padding(.horizontal, 8)
+                .padding(.bottom, 6)
+            ForEach(Array(lessons.enumerated()), id: \.element.id) { index, lesson in
+                LessonPathRow(number: index + 1, lesson: lesson,
+                              isCurrent: lesson.id == current,
+                              isRead: model.readLessons.contains(lesson.id)) {
+                    withAnimation(VigieMotion.standard) { page = .lesson(lesson.id) }
+                }
+            }
+        }
+        .padding(8)
+        .padding(.top, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .panelSurface()
+    }
+}
+
+/// Une étape du parcours. Toutes les lignes ont la même hauteur (deux lignes de titre), lues ou non.
+private struct LessonPathRow: View {
+    let number: Int
+    let lesson: Lesson
+    let isCurrent: Bool
+    let isRead: Bool
+    let open: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: open) {
+            HStack(alignment: .center, spacing: 10) {
+                ZStack {
+                    Circle().fill(isCurrent ? VigieTheme.accent : isRead ? VigieTheme.accent.opacity(0.14) : DS.well)
+                    if isRead && !isCurrent {
+                        Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(VigieTheme.accent)
+                    } else {
+                        Text("\(number)").font(.system(size: 11.5, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(isCurrent ? Color.white : DS.primaryText)
+                    }
+                }
+                .frame(width: 24, height: 24)
+                Text(lesson.title.text)
+                    .font(.system(size: 12.5, weight: isCurrent ? .semibold : .regular))
+                    .foregroundStyle(isCurrent ? DS.primaryText : DS.secondaryText)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 46)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(isCurrent ? DS.wellSelected : hovering ? DS.well.opacity(0.6) : .clear))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        // L'étape en cours reste nette (pas grisée) : un clic dessus ne fait simplement rien.
+        .allowsHitTesting(!isCurrent)
+        .onHover { hovering = $0 }
+        .animation(VigieMotion.quick, value: hovering)
+        .help(lesson.title.text)
     }
 }
 

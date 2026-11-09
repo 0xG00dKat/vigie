@@ -102,7 +102,7 @@ struct VigieWindow: View {
             HStack(spacing: 0) {
                 WindowRail(selected: family, page: $page) { chosen in
                     withAnimation(VigieMotion.standard) {
-                        page = lastPages[chosen] ?? chosen.firstPage
+                        page = lastPages[chosen] ?? chosen.firstPage(model: model)
                     }
                 }
                 // Réglages et Comprendre tiennent sur leur propre page d'accueil : pas de sous-menu.
@@ -397,14 +397,19 @@ enum SidebarFamily: String, CaseIterable, Identifiable {
         }
     }
 
-    var firstPage: WindowPage {
+    /// La page qui s'ouvre quand on choisit la famille : la première ligne de son sous-menu, dans l'ordre choisi.
+    @MainActor
+    func firstPage(model: AppModel) -> WindowPage {
+        let defaults = UserDefaults.standard
+        let first: String?
         switch self {
-        case .vigie: return .overview
-        case .processes: return .running
-        case .storage: return .explorer
+        case .vigie: first = SidebarOrder.apply(defaults.string(forKey: "ordreBarre.vigie") ?? "", to: WindowSidebar.vigieItems).first
+        case .processes: first = SidebarOrder.apply(defaults.string(forKey: "ordreBarre.processus") ?? "", to: WindowSidebar.processItems(model)).first
+        case .storage: first = SidebarOrder.apply(defaults.string(forKey: "ordreBarre.stockage") ?? "", to: WindowSidebar.storageItems(model)).first
         case .learn: return .learn
         case .settings: return .settings
         }
+        return first.flatMap(SidebarOrder.page) ?? .overview
     }
 
     var symbol: String {
@@ -605,7 +610,7 @@ struct WindowSidebar: View {
                 .tag(WindowPage.storage(.cache))
             }
             Section(SidebarFamily.vigie.title(developer: model.isDeveloper)) {
-                rows(["overview", "history", "rules"], order: $vigieOrder)
+                rows(Self.vigieItems, order: $vigieOrder)
             }
             Section(SidebarFamily.processes.title(developer: model.isDeveloper)) {
                 rows(processItems, order: $processOrder)
@@ -663,7 +668,7 @@ struct WindowSidebar: View {
     private var familyList: some View {
         List(selection: selection) {
             switch family {
-            case .vigie: rows(["overview", "history", "rules"], order: $vigieOrder)
+            case .vigie: rows(Self.vigieItems, order: $vigieOrder)
             case .learn:
                 // Sans groupe : la première ligne tombe à la même hauteur que dans les autres familles.
                 SideLabel(tr("Par où commencer", "Where to start"), symbol: "lightbulb").tag(WindowPage.learn)
@@ -734,7 +739,12 @@ struct WindowSidebar: View {
             .accessibilityHidden(true)
     }
 
-    private var processItems: [String] {
+    static let vigieItems = ["overview", "history", "rules"]
+
+    private var processItems: [String] { Self.processItems(model) }
+    private var storageItems: [String] { Self.storageItems(model) }
+
+    static func processItems(_ model: AppModel) -> [String] {
         var items = ["speed", "running"]
         if model.isDeveloper { items.append("dev") }
         if model.isDeveloper, let docker = model.docker, docker.state != .notInstalled { items.append("docker") }
@@ -742,7 +752,7 @@ struct WindowSidebar: View {
         return items
     }
 
-    private var storageItems: [String] {
+    static func storageItems(_ model: AppModel) -> [String] {
         var items = ["explorer"]
         if model.isDeveloper { items.append("toolchains") }
         if let report = model.storage {
@@ -806,6 +816,26 @@ struct WindowSidebar: View {
 
 /// L'ordre des lignes de la barre latérale, choisi à la souris.
 enum SidebarOrder {
+    /// La page d'une ligne du sous-menu (mêmes identifiants que l'ordre gardé).
+    static func page(_ id: String) -> WindowPage? {
+        switch id {
+        case "overview": return .overview
+        case "history": return .history
+        case "rules": return .rules
+        case "speed": return .speed
+        case "running": return .running
+        case "dev": return .processes(.dev)
+        case "docker": return .docker
+        case "ports": return .ports
+        case "explorer": return .explorer
+        case "toolchains": return .toolchains
+        case "scan": return .storage(.cache)
+        default:
+            guard id.hasPrefix("storage:"), let kind = StorageKind(rawValue: String(id.dropFirst(8))) else { return nil }
+            return .storage(kind)
+        }
+    }
+
     /// Les lignes disponibles, dans l'ordre gardé ; celles jamais rangées gardent leur place par défaut, à la suite.
     static func apply(_ stored: String, to available: [String]) -> [String] {
         let saved = stored.split(separator: ",").map(String.init)
