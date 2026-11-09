@@ -1,6 +1,6 @@
 # Vigie
 
-App macOS de barre des menus qui rend lisible ce qui tourne sur le Mac : elle regroupe le millier de processus du Moniteur d'activité en quelques dizaines de lignes, explique chacune en français simple et permet de les fermer.
+App macOS qui rend le Mac lisible : ce qui tourne, ce qui prend la place et ce qui le ralentit, expliqué simplement, avec de quoi faire le ménage sans risque. Elle vit dans la barre des menus (panneau) et s'ouvre en grand dans une fenêtre (vue d'ensemble, check-up, apps, projets, explorateur du disque, Comprendre mon Mac). Le panneau regroupe le millier de processus du Moniteur d'activité en quelques dizaines de lignes, explique chacune en français simple et permet de les fermer.
 
 ## Modes Simple et Développeur
 

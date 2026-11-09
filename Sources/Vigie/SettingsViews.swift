@@ -288,7 +288,7 @@ private struct AboutSettings: View {
                 Text("Vigie").font(.system(size: 20, weight: .semibold))
                 Text(tr("Version \(model.currentVersion?.description ?? "?")", "Version \(model.currentVersion?.description ?? "?")"))
                     .font(.system(size: 12.5)).foregroundStyle(DS.secondaryText)
-                Text(tr("Le Moniteur d'activité, en lisible.", "Activity Monitor, made readable."))
+                Text(tr("Ton Mac, enfin lisible.", "Your Mac, finally readable."))
                     .font(.system(size: 12.5)).foregroundStyle(DS.secondaryText)
             }
             Spacer()

@@ -5,8 +5,8 @@
 <h1 align="center">Vigie</h1>
 
 <p align="center">
-  Activity Monitor, made readable.<br>
-  A macOS menu bar app that turns your Mac's thousand processes into a few dozen rows, explains each one in plain words and lets you close them safely.
+  <b>Your Mac, finally readable.</b><br>
+  A macOS app that shows what's running, what's taking space and what's slowing your Mac down, explains it in plain words and helps you clean up safely. It lives in the menu bar and opens into a full window when you want the whole picture.
 </p>
 
 <p align="center"><b>English</b> · <a href="README.fr.md">Français</a></p>

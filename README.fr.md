@@ -5,8 +5,8 @@
 <h1 align="center">Vigie</h1>
 
 <p align="center">
-  Le Moniteur d'activité, en lisible.<br>
-  Une app de barre des menus macOS qui regroupe le millier de processus de ton Mac en quelques dizaines de lignes, explique chacune en français simple et permet de les fermer sans risque.
+  <b>Ton Mac, enfin lisible.</b><br>
+  Une app macOS qui montre ce qui tourne, ce qui prend la place et ce qui ralentit ton Mac, l'explique simplement et t'aide à faire le ménage sans risque. Elle vit dans la barre des menus et s'ouvre en grand quand tu veux tout voir.
 </p>
 
 <p align="center"><a href="README.md">English</a> · <b>Français</b></p>
