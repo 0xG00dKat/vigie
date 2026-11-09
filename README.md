@@ -70,7 +70,7 @@ Requirements: macOS 14 or later.
 ### Download
 
 1. Download `Vigie-x.y.z.zip` from the [latest release](https://github.com/0xG00dKat/vigie/releases/latest), unzip it and move `Vigie.app` to Applications.
-2. Vigie isn't notarized by Apple yet, so macOS blocks it the first time you open it. Open **System Settings › Privacy & Security**, scroll down and click **Open Anyway** next to the message about Vigie. (Or, in a terminal: `xattr -dr com.apple.quarantine /Applications/Vigie.app`.)
+2. Open it: Vigie is signed and notarized by Apple, so it opens without any warning. Its eye appears in the menu bar.
 
 ### Build from source
 
