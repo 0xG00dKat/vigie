@@ -3,6 +3,20 @@
 Chaque section est reprise telle quelle comme notes de la version sur GitHub (`scripts/release.sh`).
 Each section is used as-is for the GitHub release notes.
 
+## 0.3.1 — 2026-11-09
+
+**Français**
+- Installation plus simple : Vigie se télécharge en image disque (.dmg). On l'ouvre et on glisse Vigie dans Applications.
+- Les explications de « Comprendre mon Mac » utilisent toute la fenêtre : sur un grand écran, le parcours s'affiche à gauche (étapes lues cochées, un clic pour passer de l'une à l'autre) et la page est centrée.
+- L'onglet « Mon Mac » s'ouvre sur sa première page, Vitesse et batterie.
+- Nouvelle devise dans À propos : « Ton Mac, enfin lisible. »
+
+**English**
+- Easier install: Vigie now comes as a disk image (.dmg). Open it and drag Vigie to Applications.
+- “Understand my Mac” explanations use the whole window: on a large screen, the path shows on the left (steps you've read are ticked, one click to jump between them) and the page is centered.
+- The “My Mac” tab opens on its first page, Speed and battery.
+- New tagline in About: “Your Mac, finally readable.”
+
 ## 0.3.0 — 2026-11-09
 
 **Français**
