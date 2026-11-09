@@ -103,6 +103,7 @@ Vigie regarde une fois par jour sur GitHub s'il existe une version plus récente
 swift build                          # compilation
 swift test                           # tests
 ./scripts/build-app.sh               # build/Vigie.app
+./scripts/install.sh                 # remplace /Applications/Vigie.app et relance
 swift scripts/make-icon.swift        # régénère le logo (Support/)
 ```
 

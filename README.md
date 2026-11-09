@@ -103,6 +103,7 @@ Vigie checks GitHub once a day for a newer version and shows a banner in the pan
 swift build                          # build
 swift test                           # tests
 ./scripts/build-app.sh               # build/Vigie.app
+./scripts/install.sh                 # replace /Applications/Vigie.app with it and relaunch
 swift scripts/make-icon.swift        # regenerate the menu bar icon from Support/Vigie.icon
 ```
 
